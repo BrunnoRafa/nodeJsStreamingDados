@@ -1,4 +1,5 @@
 const moment = require('moment');
+const axios = require('axios');
 const conexao = require('../infraestrutura/conexao');
 
 class Atendimento {
@@ -8,7 +9,7 @@ class Atendimento {
     const data = moment(atendimento.data, 'DD/MM/YYYY').format('YYYY-MM-DD HH:MM:SS');
 
     const dataValida = moment(data).isSameOrAfter(dataCriacao);
-    const nomeValido = atendimento.cliente.length >= 5;
+    const cpfValido = atendimento.cliente.length === 11;
 
     const validacoes = [
       {
@@ -18,8 +19,8 @@ class Atendimento {
       },
       {
         nome: 'cliente',
-        valido: nomeValido,
-        mensagem: 'Cliente deve ter pelo menos cinco caracteres'
+        valido: cpfValido,
+        mensagem: 'CPF do Cliente invalido'
       }
     ];
 
@@ -58,11 +59,15 @@ class Atendimento {
   buscaPorId(id, res) {
     const sql = `SELECT * FROM Atendimentos where id=${id}`;
 
-    conexao.query(sql, (erro, resultado) => {
+    conexao.query(sql, async (erro, resultado) => {
       const atendimento = resultado[0];
+      const cpf = atendimento.cliente;
+
       if (erro) {
         res.status(400).json(erro);
       } else {
+        const { data } = await axios.get(`http://localhost:8082/${cpf}`);
+        atendimento.cliente = data;
         res.status(200).json(atendimento);
       }
     })
